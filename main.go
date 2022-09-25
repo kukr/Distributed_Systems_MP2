@@ -86,23 +86,35 @@ func shuffleMemList(memList []string) {
 	}
 }
 
+type statusKey struct {
+	servListKey       bool
+	failDetectKey     bool
+
+}
+
+type BufMessageMutex struct {
+	suspiCacMsgMutex      sync.Mutex
+	joinCacMsgMutex       sync.Mutex
+	leaveCacMsgMutex      sync.Mutex
+}
+
+type BufMessage struct {
+	suspiCacMsg           map[string]suspiMsg
+	joinCacMsg            map[string]time.Time
+	leaveCacMsg           map[string]time.Time
+}
+
 // Server server class
 type Server struct {
 	ID                  string
-	serverLoopKey       bool
-	failureDetectionKey bool
-	config              NodeConfig
+	statusKey
+	config              model.NodeConfig
 	pingIter            int
 	ServerConn          *net.UDPConn
 	memList             map[string]uint8 // { "id-ts": 0 }
 	sortedMemList       []string         // ["id-ts", ...]
-	// { "id-ts": { "type" : 0, "int": 0 } }
-	suspiciousCachedMessage      map[string]suspiciousMessage
-	suspiciousCachedMessageMutex sync.Mutex
-	joinCachedMessage            map[string]time.Time // {"ip-ts_ttl": timestamp}
-	joinCachedMessageMutex       sync.Mutex
-	leaveCachedMessage           map[string]time.Time // {"ip-ts_ttl": timestamp}
-	leaveCachedMessageMutex      sync.Mutex
+	BufMessage
+	BufMessageMutex
 	suspectList                  map[string]time.Time // {"ip-ts": timestamp}
 	pingList                     []string             // ['ip-ts']
 	failTimeout                  time.Duration
