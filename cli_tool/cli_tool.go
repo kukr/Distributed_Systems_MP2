@@ -7,9 +7,19 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-
-	"CS425/CS425-MP2/model"
 )
+
+type NodeConfig struct {
+	IP                   string `json:"ip"`
+	Port                 int    `json:"port"`
+	TTL                  uint8  `json:"ttl"`
+	LogPath              string `json:"log_path"`
+	PeriodTime           int    `json:"period_time"`           // Millisecond
+	PingTimeout          int    `json:"ping_timeout"`          // Millisecend
+	DisseminationTimeout int    `json:"dissemination_timeout"` // Millisecend
+	FailTimeout          int    `json:"fail_timeout"`          // Millisecond
+	IntroducerIP         string `json:"introducer_ip"`
+}
 
 type messageType uint8
 
@@ -22,7 +32,7 @@ const (
 	messageShowMemList messageType = 5
 )
 
-var config model.NodeConfig
+var config NodeConfig
 
 // buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
 func generateBuffer(mType messageType, payloads [][]byte) []byte {

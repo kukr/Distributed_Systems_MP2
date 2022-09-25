@@ -91,7 +91,7 @@ type Server struct {
 	ID                  string
 	serverLoopKey       bool
 	failureDetectionKey bool
-	config              model.NodeConfig
+	config              NodeConfig
 	pingIter            int
 	ServerConn          *net.UDPConn
 	memList             map[string]uint8 // { "id-ts": 0 }
@@ -226,41 +226,21 @@ func (s *Server) generateFullPingList() error {
 
 func (s *Server) generatePingList() error {
 	i := s.findIndexInSortedMemList(s.ID)
-	if i >= 4 {
-		s.pingList = []string{}
-		s.pingIter = 0
-	} else if i == -1 {
-		s.pingList = []string{}
-		s.pingIter = 0
-	} else {
-		coreNodeList := []string{}
-		coreNodeListSize := 4
-		if len(s.sortedMemList) < 4 {
-			coreNodeListSize = len(s.sortedMemList)
-		}
-		for i := 0; i < coreNodeListSize; i++ {
-			if s.sortedMemList[i] != s.ID {
-				coreNodeList = append(coreNodeList, s.sortedMemList[i])
-			}
-		}
-		//if len(s.sortedMemList) < 4 {
-		//coreNodeList = s.sortedMemList
-		//} else {
-		//coreNodeList = s.sortedMemList[0:4]
-		//}
-		leafNodeList := []string{}
 
-		for j := 4; j < len(s.sortedMemList); j++ {
-			if j%4 == i {
-				leafNodeList = append(leafNodeList, s.sortedMemList[j])
-			}
+	s.pingList = []string{}
+	s.pingIter = 0
+	noOfMem := len(s.sortedMemList)
+
+	if i != -1 {
+		if len(s.sortedMemList) < 4 {
+			s.pingList = s.sortedMemList
+		} else {
+			s.pingList = append(s.pingList, s.sortedMemList[(i-2)%noOfMem])
+			s.pingList = append(s.pingList, s.sortedMemList[(i-1)%noOfMem])
+			s.pingList = append(s.pingList, s.sortedMemList[(i+1)%noOfMem])
+			s.pingList = append(s.pingList, s.sortedMemList[(i+2)%noOfMem])
 		}
-		shuffleMemList(coreNodeList)
-		shuffleMemList(leafNodeList)
-		s.pingList = append(coreNodeList, leafNodeList...)
-		s.pingIter = 0
 	}
-	//log.Printf("generatePingList: i: %d, memList: %v, pingList: %v", i, s.sortedMemList, s.pingList)
 	return nil
 }
 
@@ -728,7 +708,7 @@ func main() {
 	}
 
 	// Class for server
-	s := server.NewServer(configFile)
+	s := NewServer(configFile)
 
 	f, err := os.OpenFile(s.GetConfigPath(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
