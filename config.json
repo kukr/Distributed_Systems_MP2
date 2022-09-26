@@ -1,11 +1,11 @@
 {
-    "ip": "172.22.94.178",
-    "port": 8081,
-    "ping_timeout": 200,
-    "period_time": 200,
-    "dissemination_timeout": 600,
-    "fail_timeout": 400,
+    "ipAddr": "172.22.94.178",
+    "portNum": 8001,
+    "pingTimeout": 200,
+    "periodTime": 200,
+    "dissTimeout": 600,
+    "failTimeout": 400,
     "ttl": 2,
-    "log_path": "/tmp/mp2.log",
-    "introducer_ip": "172.22.94.178"
+    "logPath": "$GOPATH/Distributed_Systems_MP2/vm.log",
+    "ipAddrIntroducer": "172.22.94.178"
 }

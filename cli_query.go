@@ -9,16 +9,16 @@ import (
 	"os"
 )
 
-type NodeConfig struct {
-	IP                   string `json:"ip"`
-	Port                 int    `json:"port"`
-	TTL                  uint8  `json:"ttl"`
-	LogPath              string `json:"log_path"`
-	PeriodTime           int    `json:"period_time"`           // Millisecond
-	PingTimeout          int    `json:"ping_timeout"`          // Millisecend
-	DisseminationTimeout int    `json:"dissemination_timeout"` // Millisecend
-	FailTimeout          int    `json:"fail_timeout"`          // Millisecond
-	IntroducerIP         string `json:"introducer_ip"`
+type ConfigOfNode struct {
+	IPAddr                  string `json:"ipAddr"`
+	PortNum                 int    `json:"portNum"`
+	TTL                     uint8  `json:"ttl"`
+	LogPath                 string `json:"logPath"`
+	PeriodTime              int    `json:"periodTime"`          
+	PingTimeout             int    `json:"pingTimeout"`          
+	DissTimeout             int    `json:"dissTimeout"`          
+	FailTimeout             int    `json:"failTimeout"`          
+	IPAddrIntroducer        string `json:"ipAddrIntroducer"`
 }
 
 type messageType uint8
@@ -32,10 +32,10 @@ const (
 	messageShowMemList messageType = 5
 )
 
-var config NodeConfig
+var config ConfigOfNode
 
 // buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
-func generateBuffer(mType messageType, payloads [][]byte) []byte {
+func genBufByte(mType messageType, payloads [][]byte) []byte {
 	replyBuf := []byte{byte(mType)}                       // messageType
 	replyBuf = append(replyBuf, ':')                      // messageType:
 	replyBuf = append(replyBuf, []byte("127.0.0.1-0")...) // messageType:ip-ts
@@ -47,35 +47,35 @@ func generateBuffer(mType messageType, payloads [][]byte) []byte {
 	return replyBuf
 }
 
-func generateLeaveBuffer() []byte {
-	return generateBuffer(messageLeave, [][]byte{})
+func genLeaveBufByte() []byte {
+	return genBufByte(messageLeave, [][]byte{})
 }
 
-func generateShowMemListBuffer() []byte {
-	return generateBuffer(messageShowMemList, [][]byte{})
+func genShowMemListBufByte() []byte {
+	return genBufByte(messageShowMemList, [][]byte{})
 }
 
 func executeCommand(command string) [][]byte {
 	serverAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", config.IP, config.Port))
 	if err != nil {
-		fmt.Println("unable to resolve udp addr")
+		fmt.Println("Not able to resolve the udp address")
 	}
 
 	conn, err := net.DialUDP("udp", nil, serverAddr)
 	if err != nil {
-		fmt.Println("unable to dial udp")
+		fmt.Println("Not to able to dial udp")
 	}
 
 	defer conn.Close()
 
 	var buf []byte
 	switch command {
-	case "memberList":
-		buf = generateShowMemListBuffer()
-	case "nodeID":
-		buf = generateShowMemListBuffer()
+	case "list_mem":
+		buf = genShowMemListBufByte()
+	case "list_self":
+		buf = genShowMemListBufByte()
 	case "leave":
-		buf = generateLeaveBuffer()
+		buf = genLeaveBufByte()
 	}
 
 	//fmt.Printf("Send: %s\n", buf)
@@ -105,14 +105,12 @@ func main() {
 	json.Unmarshal(configFile, &config)
 	args := os.Args
 	if len(args) < 2 || len(args) > 2 {
-		fmt.Println("Usage: cli_tool [memberList, nodeID, leave]")
+		fmt.Println("Usage: cli_tool [list_mem, list_self, join, leave]")
 	} else {
 		switch args[1] {
-		case "memberList":
+		case "list_mem":
 			bufList := executeCommand(args[1])
-			// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:ip-ts_inc
 			if len(bufList[0]) > 0 && bufList[0][0] == byte(messageMemList) {
-				// bufList = [[messageShowMemList], [s.ID], [ip-ts_inc], [ip-ts_inc], ...]
 				fmt.Println("Membership List:")
 				if len(bufList) > 3 {
 					for _, buf := range bufList[2:] {
@@ -120,25 +118,31 @@ func main() {
 						// message = [[ip-ts], [inc]]
 						nodeID := string(message[0])
 						inc := int(message[1][0])
-						fmt.Printf("nodeID: %s, inc: %d\n", nodeID, inc)
+						fmt.Printf("list_self: %s, inc: %d\n", nodeID, inc)
 					}
 				}
 			}
-		case "nodeID":
+		case "list_self":
 			bufList := executeCommand(args[1])
-			// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:ip-ts_inc
 			if len(bufList[0]) > 0 && bufList[0][0] == byte(messageMemList) {
-				// bufList = [[messageShowMemList], [s.ID], [ip-ts_inc], [ip-ts_inc], ...]
 				fmt.Printf("ID: %s\n", bufList[1])
 			}
+
+		case "join":
+			bufList := executeCommand(args[1])
+			if len(bufList[0]) > 0 && bufList[0][0] == byte(messageMemList) {
+				fmt.Println("Join the group")
+			}
+
+
 		case "leave":
 			bufList := executeCommand(args[1])
 			if len(bufList[0]) > 0 && bufList[0][0] == byte(messageMemList) {
-				// bufList = [[messageLeave], [s.ID]]
 				fmt.Println("Leave the group")
 			}
+
 		default:
-			fmt.Println("Usage: cli_tool [memberList, nodeID, leave]")
+			fmt.Println("Usage: cli_tool [list_mem, list_self, join, leave]")
 		}
 	}
 }
